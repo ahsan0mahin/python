@@ -31,7 +31,7 @@ export const CURRICULUM_TRACKS: Track[] = [
     subtitle: 'Core Foundations & Logic',
     accentColor: 'cyan',
     description:
-      'Master variables, data types, loops, and functions through real-time physics-inspired memory & flow animations.',
+      '20 guided modules: Bangla explanations, illustrated traces, challenges, hints, solutions, quizzes and spaced revision.',
     lessons: [
       {
         id: 'basic-variables',
