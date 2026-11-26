@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { CURRICULUM_TRACKS, TrackId, Lesson } from './data/curriculum';
 import { MotionVisualizer } from './components/MotionVisualizer';
+import { BasicCourse } from './components/BasicCourse';
 
 export function App() {
   const [selectedTrackId, setSelectedTrackId] = useState<TrackId>('basic');
@@ -40,9 +41,9 @@ export function App() {
 
   const handleRunCode = () => {
     setIsRunning(true);
-    setOutput('Compiling neural bytecode...');
+    setOutput('Loading example output (not code execution)...');
     setTimeout(() => {
-      setOutput(selectedLesson.expectedOutput);
+      setOutput(code === selectedLesson.starterCode ? selectedLesson.expectedOutput : 'Code changed. This is an example viewer, not a Python runtime. Run edited code in Python 3 to see its actual output.');
       setIsRunning(false);
     }, 450);
   };
@@ -79,7 +80,7 @@ export function App() {
           <div className="flex items-center gap-3 text-xs font-mono text-slate-400">
             <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 border border-white/10">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              STRUCTURE READY FOR CONTENT
+              BASIC PYTHON • 20 GUIDED MODULES
             </span>
           </div>
         </div>
@@ -149,6 +150,7 @@ export function App() {
           })}
         </section>
 
+        {selectedTrackId === 'basic' ? <BasicCourse /> : <>
         {/* Main Interactive Workspace */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Sidebar: Lessons List */}
@@ -241,7 +243,7 @@ export function App() {
                       className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-600 text-slate-950 font-mono text-xs font-bold hover:opacity-90 transition cursor-pointer"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
-                      Run &amp; Visualize
+                      Show example output
                     </button>
                   </div>
 
@@ -256,7 +258,7 @@ export function App() {
                   {output && (
                     <div className="border-t border-white/10 bg-slate-900/60 p-4">
                       <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-1.5">
-                        Output Console
+                        Example output • not live execution
                       </div>
                       <pre className="font-mono text-xs text-emerald-300 whitespace-pre-wrap">
                         {output}
@@ -268,6 +270,7 @@ export function App() {
             </AnimatePresence>
           </div>
         </section>
+        </>}
       </main>
     </div>
   );
