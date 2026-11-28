@@ -26,6 +26,17 @@ Predict output, step through the example, write your own solution, run it in Pyt
 
 Progress is stored in this browser's localStorage, not an account. Completed lessons are scheduled for review after 1, 3, 7, 14 and then 30 days. The review button opens a due lesson; repeat the quiz and practice before scheduling the next review. Clearing browser data removes progress. Scratchpad code is temporary and resets when navigating away from a module.
 
+## Kimi 3.1 Pro AI tutor
+
+The floating **Kimi AI Tutor** button opens a chat powered by Moonshot AI's Kimi 3.1 Pro (`kimi-k3.1-pro`, OpenAI-compatible endpoint `https://api.moonshot.ai/v1`). The tutor sees the current lesson (module, concept, example code and output) and answers in Bangla or English — explanations, hints before solutions, output prediction help and debugging.
+
+Setup — either:
+
+1. **In the app:** open the tutor → settings gear → paste your Kimi API key (from [platform.kimi.ai](https://platform.kimi.ai)). The key is kept only in this browser's `localStorage`, or
+2. **For local dev:** copy `.env.example` to `.env.local` and set `VITE_KIMI_API_KEY`. `.env.local` is gitignored.
+
+Security notes: the key is never committed to git. `VITE_`-prefixed variables are embedded into **locally** built bundles (dev server or `npm run build` on your machine) — don't share local `dist` output publicly. The GitHub Pages workflow builds in CI **without** `.env.local`, so the deployed site ships no key; visitors add their own key through the tutor settings. Requests go straight from the browser to `api.moonshot.ai`; if your network blocks that host the tutor shows a connection error.
+
 The app does **not** embed a Python interpreter. Visual traces and displayed example outputs are authored walkthroughs, not execution of learner edits. Input examples show representative user input; file examples describe local files. Use Python 3 / IDLE for practice execution. Intermediate and advanced tracks remain previews, not completed courses.
 
 ## Deployment

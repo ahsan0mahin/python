@@ -12,12 +12,18 @@ function load(): Progress {
   } catch { return {}; }
 }
 const button = 'rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-200 hover:bg-cyan-500/20 disabled:opacity-40 disabled:cursor-not-allowed';
-export function BasicCourse() {
+export function BasicCourse({ onContextChange }: { onContextChange?: (ctx: { title: string; detail: string }) => void }) {
   const [index, setIndex] = useState(0);
   const [progress, setProgress] = useState<Progress>(load);
   const [storageError, setStorageError] = useState(false);
   const lesson = BASIC_MODULES[index];
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(progress)); setStorageError(false); } catch { setStorageError(true); } }, [progress]);
+  useEffect(() => {
+    onContextChange?.({
+      title: `${lesson.title} (Basic Python)`,
+      detail: `Module ${index + 1} of ${BASIC_MODULES.length}. Concept: ${lesson.concept}\n\nExample code:\n\`\`\`python\n${lesson.code}\n\`\`\`\nExample output:\n${lesson.output}\nPractice challenge: ${lesson.challenge}`,
+    });
+  }, [lesson, index, onContextChange]);
   const done = BASIC_MODULES.filter(l => progress[l.id]?.completed).length;
   const due = BASIC_MODULES.filter(l => progress[l.id]?.completed && progress[l.id].due <= Date.now());
   function complete() {
