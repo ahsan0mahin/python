@@ -15,6 +15,12 @@ import {
 import { CURRICULUM_TRACKS, TrackId, Lesson } from './data/curriculum';
 import { MotionVisualizer } from './components/MotionVisualizer';
 import { BasicCourse } from './components/BasicCourse';
+import { KimiTutor, TutorContext } from './components/KimiTutor';
+
+const toTutorContext = (lesson: Lesson, trackTitle: string): TutorContext => ({
+  title: `${lesson.title} (${trackTitle})`,
+  detail: `Summary: ${lesson.summary}\n\nExample code:\n\`\`\`python\n${lesson.starterCode}\n\`\`\`\nExpected output:\n${lesson.expectedOutput}`,
+});
 
 export function App() {
   const [selectedTrackId, setSelectedTrackId] = useState<TrackId>('basic');
@@ -23,6 +29,9 @@ export function App() {
   const [code, setCode] = useState<string>(currentTrack.lessons[0].starterCode);
   const [output, setOutput] = useState<string>('');
   const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [tutorContext, setTutorContext] = useState<TutorContext>(() =>
+    toTutorContext(currentTrack.lessons[0], currentTrack.title),
+  );
 
   const handleSelectTrack = (trackId: TrackId) => {
     setSelectedTrackId(trackId);
@@ -31,12 +40,14 @@ export function App() {
     setSelectedLesson(firstLesson);
     setCode(firstLesson.starterCode);
     setOutput('');
+    setTutorContext(toTutorContext(firstLesson, track.title));
   };
 
   const handleSelectLesson = (lesson: Lesson) => {
     setSelectedLesson(lesson);
     setCode(lesson.starterCode);
     setOutput('');
+    setTutorContext(toTutorContext(lesson, currentTrack.title));
   };
 
   const handleRunCode = () => {
@@ -150,7 +161,7 @@ export function App() {
           })}
         </section>
 
-        {selectedTrackId === 'basic' ? <BasicCourse /> : <>
+        {selectedTrackId === 'basic' ? <BasicCourse onContextChange={setTutorContext} /> : <>
         {/* Main Interactive Workspace */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Sidebar: Lessons List */}
@@ -272,6 +283,8 @@ export function App() {
         </section>
         </>}
       </main>
+
+      <KimiTutor context={tutorContext} />
     </div>
   );
 }
