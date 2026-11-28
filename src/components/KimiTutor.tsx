@@ -1,14 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Settings, Trash2, X, Send, KeyRound, AlertTriangle, Bot, User } from 'lucide-react';
+import { Sparkles, Settings, Trash2, X, Send, KeyRound, AlertTriangle, Bot, User, CheckCircle2, XCircle, Loader2, Zap } from 'lucide-react';
 import {
   ChatMessage,
+  CheckStep,
   KimiConfig,
   DEFAULT_BASE_URL,
   DEFAULT_MODEL,
   loadConfig,
   saveConfig,
   streamChat,
+  testConnection,
 } from '../lib/kimi';
 
 export interface TutorContext {
@@ -109,6 +111,8 @@ export function KimiTutor({ context }: { context: TutorContext }) {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testSteps, setTestSteps] = useState<CheckStep[] | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -192,6 +196,18 @@ export function KimiTutor({ context }: { context: TutorContext }) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       void send(input);
+    }
+  }
+
+  async function runTest(cfg?: KimiConfig) {
+    const toTest = cfg ?? loadConfig();
+    if (!toTest.apiKey || testing) return;
+    setTesting(true);
+    setTestSteps(null);
+    try {
+      setTestSteps(await testConnection(toTest));
+    } finally {
+      setTesting(false);
     }
   }
 
@@ -301,26 +317,50 @@ export function KimiTutor({ context }: { context: TutorContext }) {
                         spellCheck={false}
                       />
                     </label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         type="button"
                         onClick={() => {
-                          saveConfig({
+                          const next = {
                             apiKey: config.apiKey.trim(),
                             baseUrl: config.baseUrl.trim() || DEFAULT_BASE_URL,
                             model: config.model.trim() || DEFAULT_MODEL,
-                          });
-                          setConfig(loadConfig());
-                          setSettingsOpen(false);
+                          };
+                          saveConfig(next);
+                          setConfig(next);
+                          void runTest(next);
                         }}
-                        className="rounded-lg bg-cyan-500/20 border border-cyan-400/40 px-3 py-2 text-sm text-cyan-200 hover:bg-cyan-500/30 transition cursor-pointer"
+                        disabled={testing}
+                        className="flex items-center gap-1.5 rounded-lg bg-cyan-500/20 border border-cyan-400/40 px-3 py-2 text-sm text-cyan-200 hover:bg-cyan-500/30 disabled:opacity-50 transition cursor-pointer"
                       >
-                        Save
+                        {testing ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Zap className="w-3.5 h-3.5" />
+                        )}
+                        {testing ? 'Testing…' : 'Save & test connection'}
                       </button>
                       <p className="text-[10px] text-slate-500 leading-4">
                         Key শুধু এই browser-এ (localStorage) থাকে — GitHub-এ commit হয় না।
                       </p>
                     </div>
+                    {testSteps && (
+                      <ul className="space-y-1.5 rounded-xl border border-white/10 bg-slate-950/50 p-3" aria-live="polite">
+                        {testSteps.map((s, i) => (
+                          <li key={i} className="flex items-start gap-2 text-xs">
+                            {s.ok ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                            ) : (
+                              <XCircle className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <div className="text-slate-200">{s.label}</div>
+                              <div className={s.ok ? 'text-slate-400 break-words' : 'text-amber-200 break-words'}>{s.detail}</div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -355,6 +395,7 @@ export function KimiTutor({ context }: { context: TutorContext }) {
                           <p className="text-slate-400 text-xs leading-6">
                             বর্তমান lesson: <span className="text-cyan-300">{context.title}</span>।
                             যেকোনো প্রশ্ন করো — ব্যাখ্যা, hint, output prediction বা debug।
+                            API connect হয়েছে কিনা যাচাই করতে Settings ⚙️ → "Save & test connection" চাপো।
                           </p>
                         </div>
                       )}

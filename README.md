@@ -37,6 +37,8 @@ Setup — either:
 
 Security notes: the key is never committed to git. `VITE_`-prefixed variables are embedded into **locally** built bundles (dev server or `npm run build` on your machine) — don't share local `dist` output publicly. The GitHub Pages workflow builds in CI **without** `.env.local`, so the deployed site ships no key; visitors add their own key through the tutor settings. Requests go straight from the browser to `api.moonshot.ai`; if your network blocks that host the tutor shows a connection error.
 
+To verify the API is connected: open the tutor → settings gear → **Save & test connection**. It checks three steps with per-step results — key authentication (`GET /models`), model availability for the key, and a live chat round-trip (with response time).
+
 The app does **not** embed a Python interpreter. Visual traces and displayed example outputs are authored walkthroughs, not execution of learner edits. Input examples show representative user input; file examples describe local files. Use Python 3 / IDLE for practice execution. Intermediate and advanced tracks remain previews, not completed courses.
 
 ## Deployment

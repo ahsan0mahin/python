@@ -156,3 +156,114 @@ export async function streamChat(
     throw err;
   }
 }
+
+/* --------------------------- connection test --------------------------- */
+
+export interface CheckStep {
+  label: string;
+  ok: boolean;
+  detail: string;
+}
+
+function timeoutSignal(ms: number): AbortSignal {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}
+
+function networkDetail(err: unknown, what: string): string {
+  if (err instanceof TypeError) return `Network/CORS error — তোমার browser থেকে ${what}-তে পৌঁছানো যায়নি`;
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
+
+/** One-shot non-streaming chat call (used by the connection test). */
+async function chatOnce(config: KimiConfig, messages: ChatMessage[]): Promise<string> {
+  const endpoint = `${config.baseUrl.replace(/\/+$/, '')}/chat/completions`;
+  const send = async (extra: Record<string, unknown>): Promise<string> => {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({ model: config.model, messages, ...extra }),
+      signal: timeoutSignal(30000),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw friendlyError(res.status, text);
+    }
+    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    return json.choices?.[0]?.message?.content ?? '';
+  };
+  try {
+    return await send({ reasoning_effort: 'low' });
+  } catch (err) {
+    if (err instanceof Error && (err as StatusError).status === 400) return send({});
+    throw err;
+  }
+}
+
+/**
+ * Verify the setup in three steps: key authentication via GET /models,
+ * model availability for this key, and a live chat round-trip.
+ */
+export async function testConnection(config: KimiConfig): Promise<CheckStep[]> {
+  const steps: CheckStep[] = [];
+  const base = config.baseUrl.replace(/\/+$/, '');
+
+  // 1) auth + 2) model visibility
+  try {
+    const res = await fetch(`${base}/models`, {
+      headers: { Authorization: `Bearer ${config.apiKey}` },
+      signal: timeoutSignal(15000),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      steps.push({ label: 'API key authentication', ok: false, detail: friendlyError(res.status, text).message });
+      return steps;
+    }
+    steps.push({ label: 'API key authentication', ok: true, detail: 'Key accepted ✓' });
+    let ids: string[] = [];
+    try {
+      const json = (await res.json()) as { data?: { id?: string }[] };
+      ids = (Array.isArray(json.data) ? json.data : [])
+        .map((m) => (m && typeof m.id === 'string' ? m.id : ''))
+        .filter(Boolean);
+    } catch {
+      /* non-JSON body — auth already proved OK */
+    }
+    const found = ids.includes(config.model);
+    if (ids.length && !found) {
+      steps.push({
+        label: `Model "${config.model}"`,
+        ok: false,
+        detail: `Key-এর model list-এ নেই। Available: ${ids.slice(0, 8).join(', ')}${ids.length > 8 ? '…' : ''}`,
+      });
+      return steps;
+    }
+    steps.push({
+      label: `Model "${config.model}"`,
+      ok: true,
+      detail: found ? 'Model available for this key ✓' : 'Model checked ✓',
+    });
+  } catch (err) {
+    steps.push({ label: 'API reachability', ok: false, detail: networkDetail(err, 'Kimi API') });
+    return steps;
+  }
+
+  // 3) live chat round-trip
+  try {
+    const started = Date.now();
+    const reply = await chatOnce(config, [{ role: 'user', content: 'Reply with exactly one word: pong' }]);
+    steps.push({
+      label: 'Chat completion',
+      ok: true,
+      detail: `${Date.now() - started}ms → "${reply.trim().slice(0, 40)}" ✓`,
+    });
+  } catch (err) {
+    steps.push({ label: 'Chat completion', ok: false, detail: networkDetail(err, 'chat request') });
+  }
+  return steps;
+}
